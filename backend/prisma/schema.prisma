@@ -1,0 +1,26 @@
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model WorkType {
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  unit      String
+  workLogs  WorkLog[]
+}
+
+model WorkLog {
+  id            Int      @id @default(autoincrement())
+  date          DateTime
+  volume        Float
+  performer     String
+  workTypeId    Int
+  workType      WorkType @relation(fields: [workTypeId], references: [id])
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
