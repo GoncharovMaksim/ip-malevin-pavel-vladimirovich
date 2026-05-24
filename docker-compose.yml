@@ -21,6 +21,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      network: host
     container_name: construction_backend
     restart: always
     environment:
@@ -37,6 +38,7 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      network: host
     container_name: construction_frontend
     restart: always
     ports:
