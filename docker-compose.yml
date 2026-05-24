@@ -26,6 +26,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       PORT: ${PORT}
+      CORS_ORIGIN: ${CORS_ORIGIN}
     ports:
       - "3001:3001"
     depends_on:
