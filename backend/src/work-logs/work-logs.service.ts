@@ -1,4 +1,5 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma.service';
 import { CreateWorkLogDto } from './dto/create-work-log.dto';
 import { UpdateWorkLogDto } from './dto/update-work-log.dto';
@@ -7,33 +8,33 @@ import { UpdateWorkLogDto } from './dto/update-work-log.dto';
 export class WorkLogsService {
   constructor(private prisma: PrismaService) {}
 
-  async findAll(filters?: { startDate?: string; endDate?: string; sortOrder?: 'asc' | 'desc' }) {
-    const where: any = {};
+  async findAll(filters?: { startDate?: string; endDate?: string; sortOrder?: string }) {
+    const where: Prisma.WorkLogWhereInput = {};
 
     if (filters?.startDate || filters?.endDate) {
-      where.date = {};
+      const dateCondition: { gte?: Date; lte?: Date } = {};
+
       if (filters.startDate) {
         const start = new Date(filters.startDate);
         start.setUTCHours(0, 0, 0, 0);
-        where.date.gte = start;
+        dateCondition.gte = start;
       }
+
       if (filters.endDate) {
         const end = new Date(filters.endDate);
         end.setUTCHours(23, 59, 59, 999);
-        where.date.lte = end;
+        dateCondition.lte = end;
       }
+
+      where.date = dateCondition;
     }
 
-    const sortOrder = filters?.sortOrder || 'desc';
+    const sortOrder: 'asc' | 'desc' = filters?.sortOrder === 'asc' ? 'asc' : 'desc';
 
     return this.prisma.workLog.findMany({
       where,
-      include: {
-        workType: true,
-      },
-      orderBy: {
-        date: sortOrder,
-      },
+      include: { workType: true },
+      orderBy: { date: sortOrder },
     });
   }
 
@@ -42,42 +43,53 @@ export class WorkLogsService {
       where: { id },
       include: { workType: true },
     });
+
     if (!log) {
       throw new NotFoundException(`Запись с ID ${id} не найдена`);
     }
+
     return log;
+  }
+
+  private async resolveWorkTypeId(name: string, unit: string): Promise<number> {
+    const trimmedName = name.trim();
+    const trimmedUnit = (unit || 'шт').trim();
+
+    let workType = await this.prisma.workType.findUnique({
+      where: { name: trimmedName },
+    });
+
+    if (!workType) {
+      workType = await this.prisma.workType.create({
+        data: { name: trimmedName, unit: trimmedUnit },
+      });
+    }
+
+    return workType.id;
+  }
+
+  private async assertWorkTypeExists(id: number): Promise<void> {
+    const exists = await this.prisma.workType.findUnique({ where: { id } });
+    if (!exists) {
+      throw new NotFoundException(`Вид работы с ID ${id} не найден`);
+    }
   }
 
   async create(dto: CreateWorkLogDto) {
     let workTypeId = dto.workTypeId;
 
     if (!workTypeId && dto.customWorkName) {
-      const name = dto.customWorkName.trim();
-      const unit = (dto.customWorkUnit || 'шт').trim();
-      
-      let workType = await this.prisma.workType.findUnique({
-        where: { name },
-      });
-
-      if (!workType) {
-        workType = await this.prisma.workType.create({
-          data: { name, unit },
-        });
-      }
-      workTypeId = workType.id;
+      workTypeId = await this.resolveWorkTypeId(
+        dto.customWorkName,
+        dto.customWorkUnit ?? 'шт',
+      );
     }
 
     if (!workTypeId) {
-      throw new NotFoundException('Не указан вид работы');
+      throw new BadRequestException('Не указан вид работы');
     }
 
-    const workTypeExists = await this.prisma.workType.findUnique({
-      where: { id: workTypeId },
-    });
-
-    if (!workTypeExists) {
-      throw new NotFoundException(`Вид работы с ID ${workTypeId} не найден`);
-    }
+    await this.assertWorkTypeExists(workTypeId);
 
     return this.prisma.workLog.create({
       data: {
@@ -86,9 +98,7 @@ export class WorkLogsService {
         performer: dto.performer,
         workTypeId,
       },
-      include: {
-        workType: true,
-      },
+      include: { workType: true },
     });
   }
 
@@ -98,49 +108,31 @@ export class WorkLogsService {
     let workTypeId = dto.workTypeId;
 
     if (!workTypeId && dto.customWorkName) {
-      const name = dto.customWorkName.trim();
-      const unit = (dto.customWorkUnit || 'шт').trim();
-
-      let workType = await this.prisma.workType.findUnique({
-        where: { name },
-      });
-
-      if (!workType) {
-        workType = await this.prisma.workType.create({
-          data: { name, unit },
-        });
-      }
-      workTypeId = workType.id;
+      workTypeId = await this.resolveWorkTypeId(
+        dto.customWorkName,
+        dto.customWorkUnit ?? 'шт',
+      );
     }
 
-    if (workTypeId) {
-      const workTypeExists = await this.prisma.workType.findUnique({
-        where: { id: workTypeId },
-      });
-      if (!workTypeExists) {
-        throw new NotFoundException(`Вид работы с ID ${workTypeId} не найден`);
-      }
+    if (workTypeId !== undefined) {
+      await this.assertWorkTypeExists(workTypeId);
     }
 
-    const data: any = {};
+    const data: Prisma.WorkLogUpdateInput = {};
     if (dto.date) data.date = new Date(dto.date);
     if (dto.volume !== undefined) data.volume = dto.volume;
     if (dto.performer) data.performer = dto.performer;
-    if (workTypeId !== undefined) data.workTypeId = workTypeId;
+    if (workTypeId !== undefined) data.workType = { connect: { id: workTypeId } };
 
     return this.prisma.workLog.update({
       where: { id },
       data,
-      include: {
-        workType: true,
-      },
+      include: { workType: true },
     });
   }
 
   async remove(id: number) {
     await this.findOne(id);
-    return this.prisma.workLog.delete({
-      where: { id },
-    });
+    return this.prisma.workLog.delete({ where: { id } });
   }
 }

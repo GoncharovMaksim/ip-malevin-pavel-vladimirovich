@@ -10,7 +10,18 @@ export interface WorkLog {
   volume: number;
   performer: string;
   workTypeId: number;
-  workType: WorkType;
+  workType: WorkType | null;
   createdAt: string;
   updatedAt: string;
+}
+
+export type SortField = 'date' | 'workType' | 'volume' | 'performer';
+
+export interface WorkLogPayload {
+  date: string;
+  volume: number;
+  performer: string;
+  workTypeId?: number;
+  customWorkName?: string;
+  customWorkUnit?: string;
 }
