@@ -351,7 +351,7 @@ function ConstructionDashboard() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as any)}
-              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs md:text-sm text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer"
+              className="bg-slate-950 border border-slate-800 rounded-xl px-3 pr-8 py-1.5 text-xs md:text-sm text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none"
             >
               <option value="date">Дате выполнения</option>
               <option value="workType">Виду работы</option>
@@ -464,7 +464,7 @@ function ConstructionDashboard() {
                           </span>
                         </td>
                         <td className="px-6 py-4 flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center text-slate-550 border border-slate-800">
+                          <div className="w-6 h-6 rounded-full bg-slate-900 flex items-center justify-center text-slate-500 border border-slate-800">
                             <User className="w-3.5 h-3.5" />
                           </div>
                           <span>{log.performer}</span>
@@ -511,7 +511,7 @@ function ConstructionDashboard() {
                     </div>
                   ))
                 ) : sortedWorkLogs.length === 0 ? (
-                  <div className="bg-slate-900/10 border border-slate-900 rounded-2xl p-8 text-center text-slate-550 text-xs">
+                  <div className="bg-slate-900/10 border border-slate-900 rounded-2xl p-8 text-center text-slate-500 text-xs">
                     Записи не найдены. Внесите новую запись.
                   </div>
                 ) : (
@@ -525,25 +525,24 @@ function ConstructionDashboard() {
                       className="bg-slate-900/30 border border-slate-900 rounded-2xl p-4 flex flex-col gap-2 group relative"
                     >
                       <div className="flex justify-between items-center">
-                        <span className="text-xs font-semibold text-slate-550">
+                        <span className="text-xs font-semibold text-slate-500">
                           {new Date(log.date).toLocaleDateString('ru-RU')}
                         </span>
                       </div>
                       
-                      <div className="flex flex-col gap-0.5">
-                        <h4 className="text-sm font-bold text-white tracking-tight leading-snug">
-                          {log.workType?.name || '—'}
-                        </h4>
-                        
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-400 text-[10px] font-bold">
+                      <div className="flex flex-col gap-2">
+                        <div className="flex justify-between items-start gap-3">
+                          <h4 className="text-sm font-bold text-white tracking-tight leading-snug">
+                            {log.workType?.name || '—'}
+                          </h4>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-400 text-[10px] font-bold shrink-0">
                             {log.volume} {log.workType?.unit || ''}
                           </span>
-                          <span className="text-slate-700 text-xs">•</span>
-                          <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                            <User className="w-3.5 h-3.5 text-slate-500" />
-                            <span>{log.performer}</span>
-                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                          <User className="w-3.5 h-3.5 text-slate-500" />
+                          <span>{log.performer}</span>
                         </div>
                       </div>
 
