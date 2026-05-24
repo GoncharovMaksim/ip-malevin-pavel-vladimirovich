@@ -44,8 +44,10 @@ function ConstructionDashboard() {
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLog, setEditingLog] = useState<WorkLog | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
   const [formError, setFormError] = useState('');
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     date: '',
     volume: '',
@@ -93,6 +95,7 @@ function ConstructionDashboard() {
     mutationFn: deleteWorkLog,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['workLogs'] });
+      setDeleteConfirmId(null);
     },
   });
 
@@ -107,6 +110,7 @@ function ConstructionDashboard() {
       customWorkUnit: '',
     });
     setFormError('');
+    setFormErrors({});
     setIsModalOpen(true);
   };
 
@@ -121,6 +125,7 @@ function ConstructionDashboard() {
       customWorkUnit: '',
     });
     setFormError('');
+    setFormErrors({});
     setIsModalOpen(true);
   };
 
@@ -128,6 +133,7 @@ function ConstructionDashboard() {
     setIsModalOpen(false);
     setEditingLog(null);
     setFormError('');
+    setFormErrors({});
   };
 
   const handleInputChange = (
@@ -135,33 +141,56 @@ function ConstructionDashboard() {
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (formErrors[name]) {
+      setFormErrors((prev) => ({ ...prev, [name]: '' }));
+    }
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError('');
-
+    
+    const errors: Record<string, string> = {};
     const { date, volume, performer, workTypeId, customWorkName, customWorkUnit } = formData;
 
-    if (!date || !volume || !performer || !workTypeId) {
-      setFormError('Пожалуйста, заполните все обязательные поля');
-      return;
+    if (!workTypeId) {
+      errors.workTypeId = 'Выберите вид работы из списка';
     }
 
-    if (workTypeId === 'custom' && (!customWorkName || !customWorkUnit)) {
-      setFormError('Укажите название и единицу измерения для новой работы');
-      return;
+    if (workTypeId === 'custom') {
+      if (!customWorkName.trim()) {
+        errors.customWorkName = 'Укажите наименование новой работы';
+      }
+      if (!customWorkUnit.trim()) {
+        errors.customWorkUnit = 'Укажите единицу измерения';
+      }
     }
 
-    const volumeNum = parseFloat(volume);
-    if (isNaN(volumeNum) || volumeNum <= 0) {
-      setFormError('Объем работ должен быть положительным числом');
+    if (!volume) {
+      errors.volume = 'Укажите объем выполненных работ';
+    } else {
+      const volumeNum = parseFloat(volume);
+      if (isNaN(volumeNum) || volumeNum <= 0) {
+        errors.volume = 'Объем должен быть числом больше 0';
+      }
+    }
+
+    if (!date) {
+      errors.date = 'Выберите дату выполнения';
+    }
+
+    if (!performer.trim()) {
+      errors.performer = 'Укажите ФИО ответственного исполнителя';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return;
     }
 
     const payload: any = {
       date: new Date(date).toISOString(),
-      volume: volumeNum,
+      volume: parseFloat(volume),
       performer: performer.trim(),
     };
 
@@ -367,11 +396,7 @@ function ConstructionDashboard() {
                               <RefreshCw className="w-4 h-4" />
                             </button>
                             <button
-                              onClick={() => {
-                                if (confirm('Вы уверены, что хотите удалить эту запись?')) {
-                                  deleteMutation.mutate(log.id);
-                                }
-                              }}
+                              onClick={() => setDeleteConfirmId(log.id)}
                               className="p-1.5 hover:bg-red-950/20 hover:text-red-400 rounded-lg text-slate-500 transition-colors"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -404,7 +429,7 @@ function ConstructionDashboard() {
                     </div>
                   ))
                 ) : workLogs.length === 0 ? (
-                  <div className="bg-slate-900/10 border border-slate-900 rounded-2xl p-8 text-center text-slate-500 text-xs">
+                  <div className="bg-slate-900/10 border border-slate-900 rounded-2xl p-8 text-center text-slate-550 text-xs">
                     Записи не найдены. Внесите новую запись.
                   </div>
                 ) : (
@@ -418,7 +443,7 @@ function ConstructionDashboard() {
                       className="bg-slate-900/30 border border-slate-900 rounded-2xl p-4 flex flex-col gap-3 group relative"
                     >
                       <div className="flex justify-between items-start">
-                        <span className="text-xs font-semibold text-slate-500">
+                        <span className="text-xs font-semibold text-slate-550">
                           {new Date(log.date).toLocaleDateString('ru-RU')}
                         </span>
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-400 text-xs font-bold">
@@ -445,11 +470,7 @@ function ConstructionDashboard() {
                           <span>Изм.</span>
                         </button>
                         <button
-                          onClick={() => {
-                            if (confirm('Вы уверены, что хотите удалить эту запись?')) {
-                              deleteMutation.mutate(log.id);
-                            }
-                          }}
+                          onClick={() => setDeleteConfirmId(log.id)}
                           className="px-3 py-1.5 bg-red-950/10 hover:bg-red-950/20 hover:text-red-400 rounded-lg text-[10px] font-bold text-slate-400 flex items-center gap-1 transition-all"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -500,7 +521,7 @@ function ConstructionDashboard() {
                 </div>
               )}
 
-              <form onSubmit={handleFormSubmit} className="flex flex-col gap-4">
+              <form onSubmit={handleFormSubmit} noValidate className="flex flex-col gap-4">
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] md:text-xs font-semibold text-slate-400 uppercase tracking-wider">
                     Вид работы *
@@ -509,8 +530,7 @@ function ConstructionDashboard() {
                     name="workTypeId"
                     value={formData.workTypeId}
                     onChange={handleInputChange}
-                    required
-                    className="bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs md:text-sm text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all cursor-pointer"
+                    className={`bg-slate-950 border ${formErrors.workTypeId ? 'border-red-500 focus:border-red-500' : 'border-slate-800 focus:border-indigo-500'} rounded-xl px-3.5 py-2 text-xs md:text-sm text-slate-105 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all cursor-pointer`}
                   >
                     <option value="">Выберите работу из справочника</option>
                     {workTypes.map((type) => (
@@ -522,6 +542,9 @@ function ConstructionDashboard() {
                       + Ввести работу вручную...
                     </option>
                   </select>
+                  {formErrors.workTypeId && (
+                    <span className="text-[10px] text-red-500 font-medium">{formErrors.workTypeId}</span>
+                  )}
                 </div>
 
                 <AnimatePresence>
@@ -541,10 +564,12 @@ function ConstructionDashboard() {
                           name="customWorkName"
                           value={formData.customWorkName}
                           onChange={handleInputChange}
-                          required
                           placeholder="Например, Монтаж вентиляции"
-                          className="bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs md:text-sm text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+                          className={`bg-slate-950 border ${formErrors.customWorkName ? 'border-red-500 focus:border-red-500' : 'border-slate-800 focus:border-indigo-500'} rounded-xl px-3.5 py-2 text-xs md:text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all`}
                         />
+                        {formErrors.customWorkName && (
+                          <span className="text-[10px] text-red-500 font-medium">{formErrors.customWorkName}</span>
+                        )}
                       </div>
                       <div className="flex flex-col gap-1.5">
                         <label className="text-[10px] md:text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -555,10 +580,12 @@ function ConstructionDashboard() {
                           name="customWorkUnit"
                           value={formData.customWorkUnit}
                           onChange={handleInputChange}
-                          required
                           placeholder="Например, шт или м²"
-                          className="bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs md:text-sm text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+                          className={`bg-slate-950 border ${formErrors.customWorkUnit ? 'border-red-500 focus:border-red-500' : 'border-slate-800 focus:border-indigo-500'} rounded-xl px-3.5 py-2 text-xs md:text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all`}
                         />
+                        {formErrors.customWorkUnit && (
+                          <span className="text-[10px] text-red-500 font-medium">{formErrors.customWorkUnit}</span>
+                        )}
                       </div>
                     </motion.div>
                   )}
@@ -576,9 +603,8 @@ function ConstructionDashboard() {
                         name="volume"
                         value={formData.volume}
                         onChange={handleInputChange}
-                        required
                         placeholder="0.00"
-                        className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-3.5 pr-14 py-2 text-xs md:text-sm text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+                        className={`w-full bg-slate-950 border ${formErrors.volume ? 'border-red-500 focus:border-red-500' : 'border-slate-800 focus:border-indigo-500'} rounded-xl pl-3.5 pr-14 py-2 text-xs md:text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all`}
                       />
                       <div className="absolute inset-y-0 right-0 pr-3.5 flex items-center pointer-events-none text-[10px] md:text-xs font-semibold text-indigo-400">
                         {formData.workTypeId === 'custom'
@@ -588,6 +614,9 @@ function ConstructionDashboard() {
                           : '—'}
                       </div>
                     </div>
+                    {formErrors.volume && (
+                      <span className="text-[10px] text-red-500 font-medium">{formErrors.volume}</span>
+                    )}
                   </div>
 
                   <div className="flex flex-col gap-1.5">
@@ -599,9 +628,11 @@ function ConstructionDashboard() {
                       name="date"
                       value={formData.date}
                       onChange={handleInputChange}
-                      required
-                      className="bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs md:text-sm text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+                      className={`bg-slate-950 border ${formErrors.date ? 'border-red-500 focus:border-red-500' : 'border-slate-800 focus:border-indigo-500'} rounded-xl px-3.5 py-2 text-xs md:text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all`}
                     />
+                    {formErrors.date && (
+                      <span className="text-[10px] text-red-500 font-medium">{formErrors.date}</span>
+                    )}
                   </div>
                 </div>
 
@@ -614,10 +645,12 @@ function ConstructionDashboard() {
                     name="performer"
                     value={formData.performer}
                     onChange={handleInputChange}
-                    required
                     placeholder="Например, Петров А.В."
-                    className="bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs md:text-sm text-slate-100 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all"
+                    className={`bg-slate-950 border ${formErrors.performer ? 'border-red-500 focus:border-red-500' : 'border-slate-800 focus:border-indigo-500'} rounded-xl px-3.5 py-2 text-xs md:text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all`}
                   />
+                  {formErrors.performer && (
+                    <span className="text-[10px] text-red-500 font-medium">{formErrors.performer}</span>
+                  )}
                 </div>
 
                 <div className="border-t border-slate-800 pt-4 mt-2 flex items-center justify-end gap-3">
@@ -637,6 +670,51 @@ function ConstructionDashboard() {
                   </button>
                 </div>
               </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {deleteConfirmId !== null && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDeleteConfirmId(null)}
+              className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm"
+            />
+            
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="relative w-full max-w-sm bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl p-6 flex flex-col gap-4 text-center sm:text-left"
+            >
+              <div className="flex flex-col gap-2">
+                <h3 className="text-base md:text-lg font-bold text-white">Удаление записи</h3>
+                <p className="text-xs md:text-sm text-slate-400 leading-relaxed">
+                  Вы действительно хотите удалить эту запись из журнала? Это действие необратимо.
+                </p>
+              </div>
+              <div className="flex items-center justify-end gap-3 mt-2">
+                <button
+                  type="button"
+                  onClick={() => setDeleteConfirmId(null)}
+                  className="px-4 py-2 border border-slate-800 hover:border-slate-700 hover:bg-slate-850 text-xs md:text-sm font-semibold rounded-xl text-slate-300 hover:text-white transition-colors"
+                >
+                  Отмена
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteMutation.mutate(deleteConfirmId)}
+                  disabled={deleteMutation.isPending}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white text-xs md:text-sm font-semibold rounded-xl transition-all duration-200"
+                >
+                  {deleteMutation.isPending ? 'Удаление...' : 'Удалить'}
+                </button>
+              </div>
             </motion.div>
           </div>
         )}
