@@ -17,4 +17,12 @@ export class UpdateWorkLogDto {
   @IsNumber()
   @IsOptional()
   workTypeId?: number;
+
+  @IsString()
+  @IsOptional()
+  customWorkName?: string;
+
+  @IsString()
+  @IsOptional()
+  customWorkUnit?: string;
 }

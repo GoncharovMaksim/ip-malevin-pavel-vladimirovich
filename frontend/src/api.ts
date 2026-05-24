@@ -27,7 +27,9 @@ export async function createWorkLog(data: {
   date: string;
   volume: number;
   performer: string;
-  workTypeId: number;
+  workTypeId?: number;
+  customWorkName?: string;
+  customWorkUnit?: string;
 }): Promise<WorkLog> {
   const res = await fetch(`${API_URL}/work-logs`, {
     method: 'POST',
@@ -48,6 +50,8 @@ export async function updateWorkLog(
     volume?: number;
     performer?: string;
     workTypeId?: number;
+    customWorkName?: string;
+    customWorkUnit?: string;
   },
 ): Promise<WorkLog> {
   const res = await fetch(`${API_URL}/work-logs/${id}`, {

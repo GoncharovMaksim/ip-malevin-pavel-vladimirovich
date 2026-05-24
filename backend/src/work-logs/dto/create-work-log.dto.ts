@@ -1,4 +1,4 @@
-import { IsDateString, IsNotEmpty, IsNumber, IsString, Min } from 'class-validator';
+import { IsDateString, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CreateWorkLogDto {
   @IsDateString()
@@ -14,6 +14,14 @@ export class CreateWorkLogDto {
   performer: string;
 
   @IsNumber()
-  @IsNotEmpty()
-  workTypeId: number;
+  @IsOptional()
+  workTypeId?: number;
+
+  @IsString()
+  @IsOptional()
+  customWorkName?: string;
+
+  @IsString()
+  @IsOptional()
+  customWorkUnit?: string;
 }

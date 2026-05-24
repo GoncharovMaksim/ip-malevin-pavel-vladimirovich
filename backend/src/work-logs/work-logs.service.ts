@@ -45,12 +45,34 @@ export class WorkLogsService {
   }
 
   async create(dto: CreateWorkLogDto) {
+    let workTypeId = dto.workTypeId;
+
+    if (!workTypeId && dto.customWorkName) {
+      const name = dto.customWorkName.trim();
+      const unit = (dto.customWorkUnit || 'шт').trim();
+      
+      let workType = await this.prisma.workType.findUnique({
+        where: { name },
+      });
+
+      if (!workType) {
+        workType = await this.prisma.workType.create({
+          data: { name, unit },
+        });
+      }
+      workTypeId = workType.id;
+    }
+
+    if (!workTypeId) {
+      throw new NotFoundException('Не указан вид работы');
+    }
+
     const workTypeExists = await this.prisma.workType.findUnique({
-      where: { id: dto.workTypeId },
+      where: { id: workTypeId },
     });
 
     if (!workTypeExists) {
-      throw new NotFoundException(`Вид работы с ID ${dto.workTypeId} не найден`);
+      throw new NotFoundException(`Вид работы с ID ${workTypeId} не найден`);
     }
 
     return this.prisma.workLog.create({
@@ -58,7 +80,7 @@ export class WorkLogsService {
         date: new Date(dto.date),
         volume: dto.volume,
         performer: dto.performer,
-        workTypeId: dto.workTypeId,
+        workTypeId,
       },
       include: {
         workType: true,
@@ -69,12 +91,30 @@ export class WorkLogsService {
   async update(id: number, dto: UpdateWorkLogDto) {
     await this.findOne(id);
 
-    if (dto.workTypeId) {
+    let workTypeId = dto.workTypeId;
+
+    if (!workTypeId && dto.customWorkName) {
+      const name = dto.customWorkName.trim();
+      const unit = (dto.customWorkUnit || 'шт').trim();
+
+      let workType = await this.prisma.workType.findUnique({
+        where: { name },
+      });
+
+      if (!workType) {
+        workType = await this.prisma.workType.create({
+          data: { name, unit },
+        });
+      }
+      workTypeId = workType.id;
+    }
+
+    if (workTypeId) {
       const workTypeExists = await this.prisma.workType.findUnique({
-        where: { id: dto.workTypeId },
+        where: { id: workTypeId },
       });
       if (!workTypeExists) {
-        throw new NotFoundException(`Вид работы с ID ${dto.workTypeId} не найден`);
+        throw new NotFoundException(`Вид работы с ID ${workTypeId} не найден`);
       }
     }
 
@@ -82,7 +122,7 @@ export class WorkLogsService {
     if (dto.date) data.date = new Date(dto.date);
     if (dto.volume !== undefined) data.volume = dto.volume;
     if (dto.performer) data.performer = dto.performer;
-    if (dto.workTypeId !== undefined) data.workTypeId = dto.workTypeId;
+    if (workTypeId !== undefined) data.workTypeId = workTypeId;
 
     return this.prisma.workLog.update({
       where: { id },
