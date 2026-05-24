@@ -325,14 +325,16 @@ function ConstructionDashboard() {
                 type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs md:text-sm text-slate-300 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all w-full sm:w-auto"
+                onClick={(e) => { try { (e.target as any).showPicker(); } catch (err) {} }}
+                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs md:text-sm text-slate-300 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all w-full sm:w-auto cursor-pointer"
               />
               <span className="text-slate-600">—</span>
               <input
                 type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs md:text-sm text-slate-300 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all w-full sm:w-auto"
+                onClick={(e) => { try { (e.target as any).showPicker(); } catch (err) {} }}
+                className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs md:text-sm text-slate-300 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500/20 transition-all w-full sm:w-auto cursor-pointer"
               />
             </div>
             {(startDate || endDate) && (
@@ -713,7 +715,8 @@ function ConstructionDashboard() {
                       name="date"
                       value={formData.date}
                       onChange={handleInputChange}
-                      className={`bg-slate-950 border ${formErrors.date ? 'border-red-500 focus:border-red-500' : 'border-slate-800 focus:border-indigo-500'} rounded-xl px-3.5 py-2 text-xs md:text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all`}
+                      onClick={(e) => { try { (e.target as any).showPicker(); } catch (err) {} }}
+                      className={`bg-slate-950 border ${formErrors.date ? 'border-red-500 focus:border-red-500' : 'border-slate-800 focus:border-indigo-500'} rounded-xl px-3.5 py-2 text-xs md:text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all cursor-pointer`}
                     />
                     {formErrors.date && (
                       <span className="text-[10px] text-red-500 font-medium">{formErrors.date}</span>
