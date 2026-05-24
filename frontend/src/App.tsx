@@ -40,6 +40,7 @@ function ConstructionDashboard() {
 
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'workType' | 'volume' | 'performer'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -63,8 +64,8 @@ function ConstructionDashboard() {
   });
 
   const { data: workLogs = [], isLoading: isLoadingLogs } = useQuery({
-    queryKey: ['workLogs', startDate, endDate, sortOrder],
-    queryFn: () => fetchWorkLogs({ startDate, endDate, sortOrder }),
+    queryKey: ['workLogs', startDate, endDate],
+    queryFn: () => fetchWorkLogs({ startDate, endDate }),
   });
 
   const createMutation = useMutation({
@@ -212,6 +213,38 @@ function ConstructionDashboard() {
     (t) => t.id === parseInt(formData.workTypeId, 10)
   );
 
+  const handleSort = (field: 'date' | 'workType' | 'volume' | 'performer') => {
+    if (sortBy === field) {
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortBy(field);
+      setSortOrder('desc');
+    }
+  };
+
+  const sortedWorkLogs = [...workLogs].sort((a, b) => {
+    let valA: any = a[sortBy];
+    let valB: any = b[sortBy];
+
+    if (sortBy === 'workType') {
+      valA = a.workType?.name || '';
+      valB = b.workType?.name || '';
+    }
+
+    if (sortBy === 'date') {
+      valA = new Date(a.date).getTime();
+      valB = new Date(b.date).getTime();
+    }
+
+    if (typeof valA === 'string') {
+      return sortOrder === 'asc'
+        ? valA.localeCompare(valB)
+        : valB.localeCompare(valA);
+    }
+
+    return sortOrder === 'asc' ? valA - valB : valB - valA;
+  });
+
   const totalVolume = workLogs.reduce((acc, log) => acc + log.volume, 0);
   const uniquePerformers = new Set(workLogs.map((log) => log.performer)).size;
 
@@ -313,13 +346,22 @@ function ConstructionDashboard() {
             )}
           </div>
 
-          <div className="flex items-center gap-3 self-end md:self-auto shrink-0">
-            <span className="text-xs md:text-sm text-slate-400">Сортировка:</span>
+          <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+            <span className="text-xs md:text-sm text-slate-400">Сортировать по:</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs md:text-sm text-slate-300 focus:outline-none focus:border-indigo-500 cursor-pointer"
+            >
+              <option value="date">Дате выполнения</option>
+              <option value="workType">Виду работы</option>
+              <option value="volume">Объёму</option>
+              <option value="performer">Исполнителю</option>
+            </select>
             <button
               onClick={() => setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'))}
-              className="flex items-center gap-2 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-xl text-xs md:text-sm text-slate-300 hover:text-white hover:border-slate-700 transition-all"
+              className="p-1.5 bg-slate-950 border border-slate-800 rounded-xl hover:text-white hover:border-slate-700 transition-all shrink-0"
             >
-              <span>По дате</span>
               {sortOrder === 'asc' ? (
                 <ChevronUp className="w-4 h-4 text-indigo-400" />
               ) : (
@@ -334,10 +376,50 @@ function ConstructionDashboard() {
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-slate-900 bg-slate-900/30 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  <th className="px-6 py-4">Дата выполнения</th>
-                  <th className="px-6 py-4">Вид работы</th>
-                  <th className="px-6 py-4">Объём</th>
-                  <th className="px-6 py-4">Исполнитель</th>
+                  <th 
+                    className="px-6 py-4 cursor-pointer hover:bg-slate-900/50 hover:text-white transition-all select-none"
+                    onClick={() => handleSort('date')}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Дата выполнения</span>
+                      {sortBy === 'date' && (
+                        sortOrder === 'asc' ? <ChevronUp className="w-4 h-4 text-indigo-400" /> : <ChevronDown className="w-4 h-4 text-indigo-400" />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-4 cursor-pointer hover:bg-slate-900/50 hover:text-white transition-all select-none"
+                    onClick={() => handleSort('workType')}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Вид работы</span>
+                      {sortBy === 'workType' && (
+                        sortOrder === 'asc' ? <ChevronUp className="w-4 h-4 text-indigo-400" /> : <ChevronDown className="w-4 h-4 text-indigo-400" />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-4 cursor-pointer hover:bg-slate-900/50 hover:text-white transition-all select-none"
+                    onClick={() => handleSort('volume')}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Объём</span>
+                      {sortBy === 'volume' && (
+                        sortOrder === 'asc' ? <ChevronUp className="w-4 h-4 text-indigo-400" /> : <ChevronDown className="w-4 h-4 text-indigo-400" />
+                      )}
+                    </div>
+                  </th>
+                  <th 
+                    className="px-6 py-4 cursor-pointer hover:bg-slate-900/50 hover:text-white transition-all select-none"
+                    onClick={() => handleSort('performer')}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <span>Исполнитель</span>
+                      {sortBy === 'performer' && (
+                        sortOrder === 'asc' ? <ChevronUp className="w-4 h-4 text-indigo-400" /> : <ChevronDown className="w-4 h-4 text-indigo-400" />
+                      )}
+                    </div>
+                  </th>
                   <th className="px-6 py-4 text-right">Действия</th>
                 </tr>
               </thead>
@@ -353,14 +435,14 @@ function ConstructionDashboard() {
                         <td className="px-6 py-4 text-right"><div className="h-4 bg-slate-900 rounded w-12 ml-auto"></div></td>
                       </tr>
                     ))
-                  ) : workLogs.length === 0 ? (
+                  ) : sortedWorkLogs.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="px-6 py-12 text-center text-slate-500 text-sm">
                         Записи не найдены. Внесите новую запись о выполненных работах.
                       </td>
                     </tr>
                   ) : (
-                    workLogs.map((log) => (
+                    sortedWorkLogs.map((log) => (
                       <motion.tr
                         key={log.id}
                         layout
@@ -428,40 +510,44 @@ function ConstructionDashboard() {
                       <div className="h-4 bg-slate-900 rounded w-1/3"></div>
                     </div>
                   ))
-                ) : workLogs.length === 0 ? (
+                ) : sortedWorkLogs.length === 0 ? (
                   <div className="bg-slate-900/10 border border-slate-900 rounded-2xl p-8 text-center text-slate-550 text-xs">
                     Записи не найдены. Внесите новую запись.
                   </div>
                 ) : (
-                  workLogs.map((log) => (
+                  sortedWorkLogs.map((log) => (
                     <motion.div
                       key={log.id}
                       layout
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      className="bg-slate-900/30 border border-slate-900 rounded-2xl p-4 flex flex-col gap-3 group relative"
+                      className="bg-slate-900/30 border border-slate-900 rounded-2xl p-4 flex flex-col gap-2 group relative"
                     >
-                      <div className="flex justify-between items-start">
+                      <div className="flex justify-between items-center">
                         <span className="text-xs font-semibold text-slate-550">
                           {new Date(log.date).toLocaleDateString('ru-RU')}
                         </span>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-400 text-xs font-bold">
-                          {log.volume} {log.workType?.unit || ''}
-                        </span>
                       </div>
                       
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-0.5">
                         <h4 className="text-sm font-bold text-white tracking-tight leading-snug">
                           {log.workType?.name || '—'}
                         </h4>
-                        <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
-                          <User className="w-3.5 h-3.5 text-slate-500" />
-                          <span>{log.performer}</span>
+                        
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-lg bg-indigo-500/10 text-indigo-400 text-[10px] font-bold">
+                            {log.volume} {log.workType?.unit || ''}
+                          </span>
+                          <span className="text-slate-700 text-xs">•</span>
+                          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                            <User className="w-3.5 h-3.5 text-slate-500" />
+                            <span>{log.performer}</span>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="border-t border-slate-900/50 pt-2 mt-1 flex items-center justify-end gap-2">
+                      <div className="border-t border-slate-900/50 pt-2 mt-1.5 flex items-center justify-end gap-2">
                         <button
                           onClick={() => openEditModal(log)}
                           className="px-3 py-1.5 bg-slate-900 hover:bg-slate-850 hover:text-white rounded-lg text-[10px] font-bold text-slate-400 flex items-center gap-1 transition-all"
@@ -530,7 +616,7 @@ function ConstructionDashboard() {
                     name="workTypeId"
                     value={formData.workTypeId}
                     onChange={handleInputChange}
-                    className={`bg-slate-950 border ${formErrors.workTypeId ? 'border-red-500 focus:border-red-500' : 'border-slate-800 focus:border-indigo-500'} rounded-xl px-3.5 py-2 text-xs md:text-sm text-slate-105 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all cursor-pointer`}
+                    className={`bg-slate-950 border ${formErrors.workTypeId ? 'border-red-500 focus:border-red-500' : 'border-slate-800 focus:border-indigo-500'} rounded-xl px-3.5 py-2 text-xs md:text-sm text-slate-100 focus:outline-none focus:ring-1 focus:ring-indigo-500/20 transition-all cursor-pointer`}
                   >
                     <option value="">Выберите работу из справочника</option>
                     {workTypes.map((type) => (
